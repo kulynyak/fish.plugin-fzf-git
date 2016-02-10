@@ -20,11 +20,11 @@ function fco
 		set -l fn "$TMPDIR/"(random)".fgi"
 	    cat "$content" | fzf --ansi +m > $fn
 		set target (cat $fn | head -1)
-		rm $fn
+		command rm $fn
 	else
 		set target (cat "$content" | fzf-tmux -l30 -- --no-hscroll --ansi +m -d "\t" -n 2)
 	end
-	rm $content
+	command rm $content
 	set -l tur_branch (echo "$target" | awk '{print $2}')
 	test "$tur_branch" = "$cur_branch"; and return
 	set -l stashName (git stash list | grep -m 1 "On $cur_branch: ==$cur_branch" | sed -E "s/(stash@\{.*\}): .*/\1/g")

@@ -14,5 +14,5 @@ function fbr
 	set -l bcnt (cat $fn | wc -l)
 	set -l branch (cat $fn | fzf-tmux -d (math 2 + $bcnt) +m)
 	and git checkout (echo "$branch" | sed "s/.* //" | sed "s#remotes/[^/]*/##")
-	rm $fn
+	command rm $fn
 end
