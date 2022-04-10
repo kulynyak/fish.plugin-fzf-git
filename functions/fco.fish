@@ -1,36 +1,39 @@
 function fco
-	function isGit
-		if [ -d .git ]
-			echo "1"
-		else
-			set isGit (git rev-parse --git-dir 2> /dev/null)
-		end
-	end
-	if test -z (isGit)
-		echo "Not a git repository"
-		return
-	end
-	set -l cur_branch (git rev-parse --abbrev-ref HEAD)
-	set -l content "$TMPDIR/"(random)".fgi"
-	git tag | awk '{print "\x1b[31;1mtag\x1b[m\t" $1}' > $content
-	git branch --all | grep -v HEAD | sed "s/.* //" | sed "s#remotes/[^/]*/##" | sort -u | awk '{print "\x1b[34;1mbranch\x1b[m\t" $1}' >> $content
-	eval "sed -i -e 's/$cur_branch/* $cur_branch/g' $content"
-	set -l target
-	if test -z "$TMUX"
-		set -l fn "$TMPDIR/"(random)".fgi"
-	    cat "$content" | fzf --ansi +m > $fn
-		set target (cat $fn | head -1)
-		command rm $fn
-	else
-		set target (cat "$content" | fzf-tmux -l30 -- --no-hscroll --ansi +m -d "\t" -n 2)
-	end
-	command rm $content
-	set -l tur_branch (echo "$target" | awk '{print $2}')
-	test "$tur_branch" = "$cur_branch"; and return
-	set -l stashName (git stash list | grep -m 1 "On $cur_branch: ==$cur_branch" | sed -E "s/(stash@\{.*\}): .*/\1/g")
-	test -n "$stashName"; and git stash drop "$stashName"
-    git stash save "==$cur_branch" 2>/dev/null
-	git checkout $tur_branch
-	set stashName (git stash list | grep -m 1 "On $tur_branch: ==$tur_branch" | sed -E "s/(stash@\{.*\}): .*/\1/g")
-	test -n "$stashName"; and git stash apply "$stashName"
+    function isGit
+        if [ -d .git ]
+            echo 1
+        else
+            set isGit (git rev-parse --git-dir 2> /dev/null)
+        end
+    end
+    if [ -z (isGit) ]
+        echo "Not a git repository"
+        return
+    end
+    set -l branchList $(git branch -a | string split0)
+    set -l oBranchName $(echo "$branchList" | grep \* | sed 's# *\* *##g')
+    set -l nBranch $(echo "$branchList" | fzf-tmux -d30 -- -x --select-1 --exit-0 | sed 's# *##')
+    if [ -z "$nBranch" ]
+        return
+    end
+    if string match -r origin $nBranch
+        set nBranchName $(echo "$nBranch" | sed "s#.*origin\/##")
+        set swCmd "git checkout -b $nBranchName $nBranch"
+    else
+        set nBranchName $(echo "$nBranch" | sed "s#.* ##")
+        set swCmd "git checkout $nBranchName"
+    end
+    if [ "$nBranchName" = "$oBranchName" ]
+        return
+    end
+    set -l stashName $(git stash list | grep -m 1 "On .*: ==$oBranchName==" | sed -E "s#(stash@\{.*\}): .*#\1#g")
+    if [ -n "$stashName" ]
+        git stash drop "$stashName"
+    end
+    git stash save "==$oBranchName==" 2>/dev/null
+    eval $swCmd
+    set -l stashName $(git stash list | grep -m 1 "On .*: ==$nBranchName==" | sed -E "s#(stash@\{.*\}): .*#\1#g")
+    if [ -n "$stashName" ]
+        git stash apply "$stashName"
+    end
 end
