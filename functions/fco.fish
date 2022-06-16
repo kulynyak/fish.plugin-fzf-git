@@ -36,4 +36,5 @@ function fco
     if [ -n "$stashName" ]
         git stash apply "$stashName"
     end
+    echo -e "\n"
 end
